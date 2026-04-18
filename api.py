@@ -10,6 +10,10 @@ import sys
 import urllib.request
 import os
 
+
+# Fix ffmpeg path for Linux server
+os.environ["PATH"] += ":/usr/bin:/usr/local/bin"
+
 # Download SyncNet model if not exists
 model_path = "syncnet_python/data/syncnet_v2.model"
 if not os.path.exists(model_path):
