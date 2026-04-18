@@ -1,6 +1,12 @@
 FROM python:3.10-slim
 
+# Create user
+RUN useradd -m -u 1000 user
+USER user
+ENV PATH="/home/user/.local/bin:$PATH"
+
 # Install system dependencies
+USER root
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libgl1-mesa-glx \
@@ -9,22 +15,25 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+USER user
 WORKDIR /app
 
 # Copy requirements first
-COPY requirements.txt .
+COPY --chown=user requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all files
-COPY . .
+COPY --chown=user . .
 
 # Download SyncNet model
-RUN python -c "import urllib.request; urllib.request.urlretrieve('http://www.robots.ox.ac.uk/~vgg/software/lipsync/data/syncnet_v2.model', 'syncnet_python/data/syncnet_v2.model')"
+RUN mkdir -p syncnet_python/data && \
+    wget -q http://www.robots.ox.ac.uk/~vgg/software/lipsync/data/syncnet_v2.model \
+    -O syncnet_python/data/syncnet_v2.model || echo "Model download failed - will retry at runtime"
 
 # Expose port
 EXPOSE 7860
