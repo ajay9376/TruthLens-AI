@@ -27,4 +27,4 @@ RUN mkdir -p syncnet_python/data
 
 EXPOSE 7860
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["python", "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "7860"]
