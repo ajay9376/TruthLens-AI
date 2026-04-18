@@ -30,7 +30,7 @@ BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 FFMPEG_PATH = r"C:\Users\gujju\Downloads\ffmpeg-8.1-essentials_build\ffmpeg-8.1-essentials_build\bin"
 
 # Detect if running on cloud or locally
-IS_CLOUD = not os.path.exists(FFMPEG_PATH)
+IS_CLOUD = os.name != 'nt'  # True on Linux (cloud), False on Windows (local)
 
 # ─────────────────────────────────────────────────
 #  Helpers
