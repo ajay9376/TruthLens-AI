@@ -7,6 +7,20 @@ import tempfile
 import os
 import sys
 
+import urllib.request
+import os
+
+# Download SyncNet model if not exists
+model_path = "syncnet_python/data/syncnet_v2.model"
+if not os.path.exists(model_path):
+    print("Downloading SyncNet model...")
+    os.makedirs("syncnet_python/data", exist_ok=True)
+    urllib.request.urlretrieve(
+        "http://www.robots.ox.ac.uk/~vgg/software/lipsync/data/syncnet_v2.model",
+        model_path
+    )
+    print("Model downloaded!")
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
