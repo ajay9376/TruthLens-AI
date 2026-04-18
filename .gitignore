@@ -30,3 +30,9 @@ syncnet_python/data/test_video*
 # Large model files
 *.model
 *.pth
+
+audio_analysis.png
+waveform.png
+yolov8n.pt
+*.png
+*.pt
