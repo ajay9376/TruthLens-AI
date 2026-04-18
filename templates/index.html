@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLens AI — Deepfake Detector</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <span class="logo-icon">⬡</span>
+            <span class="logo-text">TruthLens<span class="accent">AI</span></span>
+        </div>
+        <nav>
+            <span class="nav-tag">v2.0</span>
+            <span class="nav-tag">4 Signals</span>
+            <span class="nav-tag live">● Live</span>
+        </nav>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-label">DEEPFAKE DETECTION SYSTEM</div>
+        <h1 class="hero-title">
+            See the Truth<br>
+            <span class="accent-outline">Behind Every</span><br>
+            Video.
+        </h1>
+        <p class="hero-sub">
+            Powered by SyncNet · Face Texture · Blink Analysis · Lip Reading
+        </p>
+    </section>
+
+    <!-- Upload Zone -->
+    <section class="upload-section">
+        <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">⬆</div>
+            <div class="upload-text">Drop your video here</div>
+            <div class="upload-sub">MP4 · AVI · MOV · MKV supported</div>
+            <input type="file" id="fileInput" accept=".mp4,.avi,.mov,.mkv" hidden>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Choose File
+            </button>
+        </div>
+
+        <!-- Video Preview -->
+        <div class="preview-zone" id="previewZone" style="display:none">
+            <video id="videoPreview" controls></video>
+            <div class="file-info" id="fileInfo"></div>
+            <button class="analyze-btn" id="analyzeBtn" onclick="analyzeVideo()">
+                <span class="btn-icon">⬡</span>
+                Analyze with TruthLens AI
+            </button>
+        </div>
+    </section>
+
+    <!-- Results -->
+    <section class="results-section" id="resultsSection" style="display:none">
+
+        <!-- Verdict -->
+        <div class="verdict-card" id="verdictCard">
+            <div class="verdict-icon" id="verdictIcon"></div>
+            <div class="verdict-label" id="verdictLabel"></div>
+            <div class="verdict-score" id="verdictScore"></div>
+        </div>
+
+        <!-- Signal Breakdown -->
+        <div class="signals-grid">
+            <div class="signal-card" id="signal-syncnet">
+                <div class="signal-header">
+                    <span class="signal-icon">🎵</span>
+                    <span class="signal-name">SyncNet</span>
+                    <span class="signal-score" id="score-syncnet">—</span>
+                </div>
+                <div class="signal-bar">
+                    <div class="signal-fill" id="fill-syncnet"></div>
+                </div>
+                <div class="signal-label">Lip-Audio Sync Analysis</div>
+            </div>
+
+            <div class="signal-card" id="signal-texture">
+                <div class="signal-header">
+                    <span class="signal-icon">🎨</span>
+                    <span class="signal-name">Texture</span>
+                    <span class="signal-score" id="score-texture">—</span>
+                </div>
+                <div class="signal-bar">
+                    <div class="signal-fill" id="fill-texture"></div>
+                </div>
+                <div class="signal-label">Face Texture Analysis</div>
+            </div>
+
+            <div class="signal-card" id="signal-blink">
+                <div class="signal-header">
+                    <span class="signal-icon">👁️</span>
+                    <span class="signal-name">Blink</span>
+                    <span class="signal-score" id="score-blink">—</span>
+                </div>
+                <div class="signal-bar">
+                    <div class="signal-fill" id="fill-blink"></div>
+                </div>
+                <div class="signal-label">Eye Blink Pattern</div>
+            </div>
+
+            <div class="signal-card" id="signal-lip">
+                <div class="signal-header">
+                    <span class="signal-icon">👄</span>
+                    <span class="signal-name">Lip Reader</span>
+                    <span class="signal-score" id="score-lip">—</span>
+                </div>
+                <div class="signal-bar">
+                    <div class="signal-fill" id="fill-lip"></div>
+                </div>
+                <div class="signal-label">Speech Articulation</div>
+            </div>
+        </div>
+
+        <!-- Analyze Another -->
+        <div class="reset-zone">
+            <button class="reset-btn" onclick="resetUI()">
+                Analyze Another Video
+            </button>
+        </div>
+
+    </section>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display:none">
+        <div class="loading-box">
+            <div class="loading-hex">⬡</div>
+            <div class="loading-title">TruthLens AI</div>
+            <div class="loading-status" id="loadingStatus">Initializing...</div>
+            <div class="loading-bar">
+                <div class="loading-fill" id="loadingFill"></div>
+            </div>
+            <div class="loading-steps">
+                <div class="step" id="step1">⬡ SyncNet Analysis</div>
+                <div class="step" id="step2">⬡ Texture Analysis</div>
+                <div class="step" id="step3">⬡ Blink Detection</div>
+                <div class="step" id="step4">⬡ Lip Reading</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-text">
+            TruthLens AI · Built with 4-Signal Detection
+        </div>
+        <div class="footer-tags">
+            <span>SyncNet</span>
+            <span>MediaPipe</span>
+            <span>YOLOv8</span>
+            <span>LibROSA</span>
+        </div>
+    </footer>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

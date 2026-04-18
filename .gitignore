@@ -1,0 +1,32 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporary files
+tmp_dir/
+tmp_dir2/
+tmp_truthlens/
+*.wav
+*.npy
+
+# Test videos
+test_video.mp4
+test_video2.mp4
+test_image.jpg
+image_test.jpg
+
+# SyncNet temp files
+syncnet_python/tmp_*/
+syncnet_python/data/input_video.avi
+syncnet_python/data/test_video*
+
+# Environment
+.env
+
+# Large model files
+*.model
+*.pth
