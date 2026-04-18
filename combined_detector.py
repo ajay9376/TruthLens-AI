@@ -5,9 +5,11 @@ Merges three independent signals into one confidence score:
 
   Signal              Weight   Source
   ─────────────────────────────────────────
-  SyncNet Lip-Sync     40%    deepfake_detector.py
-  Face Texture         35%    texture_analyzer.py
-  Blink Pattern        25%    blink_detector.py  (coming soon)
+  Face Texture         34%    texture_analyzer.py
+  Blink Pattern        33%    blink_detector.py
+  Lip Reader           33%    lip_reader.py
+
+  SyncNet: Available locally, disabled on cloud
 
 Usage:
     python combined_detector.py                     # uses test_video.mp4
@@ -24,8 +26,11 @@ import numpy as np
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 FFMPEG_PATH = r"C:\Users\gujju\Downloads\ffmpeg-8.1-essentials_build\ffmpeg-8.1-essentials_build\bin"
+
+# Detect if running on cloud or locally
+IS_CLOUD = not os.path.exists(FFMPEG_PATH)
 
 # ─────────────────────────────────────────────────
 #  Helpers
@@ -45,12 +50,15 @@ def _section(title: str):
 
 
 def add_ffmpeg_to_path():
-    if FFMPEG_PATH not in os.environ.get("PATH", ""):
-        os.environ["PATH"] += os.pathsep + FFMPEG_PATH
+    if IS_CLOUD:
+        os.environ["PATH"] += ":/usr/bin:/usr/local/bin"
+    else:
+        if FFMPEG_PATH not in os.environ.get("PATH", ""):
+            os.environ["PATH"] += os.pathsep + FFMPEG_PATH
 
 
 # ─────────────────────────────────────────────────
-#  1. SyncNet Score  (40 % weight)
+#  1. SyncNet Score
 # ─────────────────────────────────────────────────
 
 SYNCNET_DIR = os.path.join(BASE_DIR, "syncnet_python")
@@ -113,16 +121,16 @@ def _parse_syncnet(output: str):
 
 
 def get_syncnet_score(video_path: str) -> float:
-    """
-    Run SyncNet and return a 0-100 score.
-    Higher = more likely REAL (good lip-sync).
-    Returns 50.0 (neutral) if video has no audio or analysis fails.
-    """
-    _section("① SyncNet Lip-Sync Analysis  [weight: 40%]")
+    _section("① SyncNet Lip-Sync Analysis")
+
+    # Disable on cloud
+    if IS_CLOUD:
+        print("⚠️  SyncNet disabled on cloud — 3-signal mode active")
+        return None
 
     if not _check_audio(video_path):
-        print("⚠️  No audio track found — skipping SyncNet (score neutral: 50)")
-        return 50.0
+        print("⚠️  No audio track found — skipping SyncNet")
+        return None
 
     converted = os.path.join(SYNCNET_DIR, "data", "input_video.avi")
     print("🎬 Converting video …")
@@ -134,21 +142,19 @@ def get_syncnet_score(video_path: str) -> float:
     confidence, min_dist, av_offset = _parse_syncnet(raw_output)
 
     if confidence is None:
-        print("⚠️  SyncNet returned no confidence value (score neutral: 50)")
-        return 50.0
+        print("⚠️  SyncNet returned no confidence value")
+        return None
 
     print(f"   Confidence : {confidence:.3f}")
     print(f"   Min Dist   : {min_dist:.3f}")
     print(f"   AV Offset  : {av_offset}")
 
-    # Map SyncNet confidence to 0-100
-    # Threshold from deepfake_detector.py:  > 1.5 → REAL,  0.5-1.5 → SUSPICIOUS
     if confidence > 1.5 and (av_offset is not None and abs(av_offset) <= 1):
-        score = 85.0 + min(confidence - 1.5, 1.5) * 10   # 85-100
+        score = 85.0 + min(confidence - 1.5, 1.5) * 10
     elif confidence > 0.5 or (av_offset is not None and abs(av_offset) <= 2):
-        score = 40.0 + (confidence - 0.5) * 22.5          # 40-72
+        score = 40.0 + (confidence - 0.5) * 22.5
     else:
-        score = max(0.0, confidence * 40.0)                # 0-40
+        score = max(0.0, confidence * 40.0)
 
     score = float(np.clip(score, 0, 100))
     print(f"   → SyncNet Score : {score:.1f}/100")
@@ -156,16 +162,11 @@ def get_syncnet_score(video_path: str) -> float:
 
 
 # ─────────────────────────────────────────────────
-#  2. Texture Score  (35 % weight)
+#  2. Texture Score
 # ─────────────────────────────────────────────────
 
 def get_texture_score(video_path: str) -> float:
-    """
-    Run texture analysis and return a 0-100 score.
-    Higher = more likely REAL (natural texture).
-    """
-    _section("② Face Texture Analysis  [weight: 35%]")
-
+    _section("② Face Texture Analysis")
     try:
         from texture_analyzer import analyze_video_texture
         score, verdict = analyze_video_texture(video_path, sample_frames=30)
@@ -173,20 +174,15 @@ def get_texture_score(video_path: str) -> float:
         return float(score)
     except Exception as exc:
         print(f"⚠️  Texture analysis failed: {exc}")
-        return 50.0
+        return None
 
 
 # ─────────────────────────────────────────────────
-#  3. Blink Score  (25 % weight)  ← COMING SOON
+#  3. Blink Score
 # ─────────────────────────────────────────────────
 
 def get_blink_score(video_path: str) -> float:
-    """
-    Run blink pattern analysis and return a 0-100 score.
-    Higher = more likely REAL (natural blink pattern).
-    """
-    _section("③ Blink Pattern Detection  [weight: 25%]")
-
+    _section("③ Blink Pattern Detection")
     try:
         from blink_detector import analyze_video_blinks
         score, verdict = analyze_video_blinks(video_path)
@@ -194,51 +190,65 @@ def get_blink_score(video_path: str) -> float:
         return float(score)
     except Exception as exc:
         print(f"⚠️  Blink analysis failed: {exc}")
-        return 50.0
+        return None
 
+
+# ─────────────────────────────────────────────────
+#  4. Lip Reader Score
+# ─────────────────────────────────────────────────
 
 def get_lip_score(video_path: str) -> float:
-    _section("④ Lip Reader — Speech Articulation  [weight: 20%]")
+    _section("④ Lip Reader — Speech Articulation")
     try:
         from lip_reader import analyze_video_lips
         score, verdict = analyze_video_lips(video_path)
         print(f"   → Lip Reader Score : {score:.1f}/100  [{verdict}]")
-        return score
+        return float(score)
     except Exception as exc:
         print(f"⚠️  Lip analysis failed: {exc}")
-        return 50.0
+        return None
 
 
 # ─────────────────────────────────────────────────
 #  Combined Score & Verdict
 # ─────────────────────────────────────────────────
 
-WEIGHTS = {
-    'syncnet':    0.20,   # Lip-sync (reduced — unreliable without clean speech)
-    'texture':    0.20,   # Face texture temporal analysis
-    'blink':      0.40,   # Blink physiology (strongest physiological signal)
-    'lip_reader': 0.20,   # Speech articulation naturalness
-}
+def combine_scores(syncnet, texture, blink, lip) -> float:
+    """
+    Dynamically weight available signals.
+    If a signal is None it is excluded and weights are redistributed.
+    """
+    signals = {
+        'syncnet':    syncnet,
+        'texture':    texture,
+        'blink':      blink,
+        'lip_reader': lip,
+    }
 
+    base_weights = {
+        'syncnet':    0.20,
+        'texture':    0.20,
+        'blink':      0.40,
+        'lip_reader': 0.20,
+    }
 
-def combine_scores(syncnet: float, texture: float,
-                   blink: float, lip: float) -> float:
-    """Weighted combination of 4 signals → 0-100 final score."""
-    return (
-        syncnet * WEIGHTS['syncnet']      +
-        texture * WEIGHTS['texture']      +
-        blink   * WEIGHTS['blink']        +
-        lip     * WEIGHTS['lip_reader']
+    # Filter out None signals
+    active = {k: v for k, v in signals.items() if v is not None}
+
+    if not active:
+        return 50.0
+
+    # Redistribute weights
+    total_weight = sum(base_weights[k] for k in active)
+    final_score = sum(
+        active[k] * (base_weights[k] / total_weight)
+        for k in active
     )
 
+    return float(final_score)
 
-def verdict_from_score(score: float) -> tuple[str, str]:
-    """Return (verdict_label, emoji).
 
-    Thresholds calibrated on ground-truth data (4-signal system):
-      AI video  (test_video2.mp4) → combined ≈ 32   → < 40 → DEEPFAKE
-      Real video (test_video.mp4) → combined ≈ 70   → > 60 → REAL
-    """
+def verdict_from_score(score: float) -> tuple:
     if score >= 60:
         return "REAL", "✅"
     elif score >= 40:
@@ -248,7 +258,6 @@ def verdict_from_score(score: float) -> tuple[str, str]:
 
 
 def _score_bar(score: float, width: int = 30) -> str:
-    """ASCII progress bar for the terminal."""
     filled = int(round(score / 100 * width))
     bar    = "█" * filled + "░" * (width - filled)
     return f"[{bar}] {score:.1f}%"
@@ -270,7 +279,6 @@ def _score_label(score: float) -> str:
 def detect(video_path: str):
     add_ffmpeg_to_path()
 
-    # ── Normalise to absolute path so every sub-module opens the same file ──
     video_path = os.path.abspath(video_path)
 
     _banner("🔍 TruthLens AI — Combined Deepfake Detector v2.0")
@@ -281,36 +289,39 @@ def detect(video_path: str):
 
     print(f"📹 Video : {os.path.basename(video_path)}")
     print(f"📂 Path  : {video_path}")
+    print(f"☁️  Mode  : {'Cloud (3-signal)' if IS_CLOUD else 'Local (4-signal)'}")
 
-    # ── Run all four analysers ───────────────────
+    # Run all analysers
     syncnet_score = get_syncnet_score(video_path)
     texture_score = get_texture_score(video_path)
     blink_score   = get_blink_score(video_path)
     lip_score     = get_lip_score(video_path)
 
-    # ── Combine ──────────────────────────────────
+    # Combine
     final_score   = combine_scores(syncnet_score, texture_score,
                                    blink_score, lip_score)
     verdict, icon = verdict_from_score(final_score)
 
-    # ── Results Dashboard ─────────────────────────
+    # Results Dashboard
     _banner("📊 FINAL RESULTS DASHBOARD")
 
-    print(f"\n  {'Signal':<28}{'Score':>8}   {'Bar':>35}   Weight")
-    print(f"  {'─'*85}")
+    print(f"\n  {'Signal':<28}{'Score':>8}   {'Bar':>35}")
+    print(f"  {'─'*75}")
 
-    def _row(name, score, weight):
-        bar = _score_bar(score, 20)
-        label = _score_label(score)
-        print(f"  {name:<28}{score:>6.1f}/100   {bar}   {weight*100:.0f}%   {label}")
+    def _row(name, score):
+        if score is None:
+            print(f"  {name:<28}{'N/A':>8}   [{'░'*20}]  ⚫ Disabled")
+        else:
+            bar   = _score_bar(score, 20)
+            label = _score_label(score)
+            print(f"  {name:<28}{score:>6.1f}/100   {bar}   {label}")
 
-    _row("SyncNet Lip-Sync",   syncnet_score, WEIGHTS['syncnet'])
-    _row("Face Texture",       texture_score, WEIGHTS['texture'])
-    _row("Blink Pattern",      blink_score,   WEIGHTS['blink'])
-    _row("Lip Reader",         lip_score,     WEIGHTS['lip_reader'])
+    _row("SyncNet Lip-Sync",   syncnet_score)
+    _row("Face Texture",       texture_score)
+    _row("Blink Pattern",      blink_score)
+    _row("Lip Reader",         lip_score)
 
-    print(f"\n  {'─'*85}")
-
+    print(f"\n  {'─'*75}")
     bar = _score_bar(final_score, 20)
     print(f"\n  {'COMBINED SCORE':<28}{final_score:>6.1f}/100   {bar}")
 
@@ -318,27 +329,22 @@ def detect(video_path: str):
     print(f"  ║  {icon}  VERDICT : {verdict:<26}     ║")
     print(f"  ╚══════════════════════════════════════╝")
 
-    # Human-readable explanation
     print("\n  📝 Interpretation:")
     if verdict == "REAL":
         print("     All signals indicate this is a genuine video.")
-        print("     Lips sync naturally, texture is realistic, blink is normal.")
     elif verdict == "SUSPICIOUS":
         print("     Some signals are inconsistent — manual review recommended.")
-        print("     Could be genuine but with compression artefacts, or a subtle deepfake.")
     else:
         print("     Multiple signals flag this as likely AI-generated / manipulated.")
-        print("     Proceed with caution — do not trust this video without verification.")
 
-    print("\n  ✅ All 4 detectors active — Phase 2 complete!")
-    print("  🚀 Next: Web UI (Phase 3)")
+    print("\n  ✅ TruthLens AI Analysis Complete!")
     print("═" * 56 + "\n")
 
     return {
-        'syncnet_score': syncnet_score,
-        'texture_score': texture_score,
-        'blink_score':   blink_score,
-        'lip_score':     lip_score,
+        'syncnet_score': syncnet_score if syncnet_score is not None else 50.0,
+        'texture_score': texture_score if texture_score is not None else 50.0,
+        'blink_score':   blink_score   if blink_score   is not None else 50.0,
+        'lip_score':     lip_score     if lip_score     is not None else 50.0,
         'final_score':   final_score,
         'verdict':       verdict,
     }
