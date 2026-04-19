@@ -291,11 +291,19 @@ def detect(video_path: str):
     print(f"📂 Path  : {video_path}")
     print(f"☁️  Mode  : {'Cloud (3-signal)' if IS_CLOUD else 'Local (4-signal)'}")
 
-    # Run all analysers
-    syncnet_score = get_syncnet_score(video_path)
-    texture_score = get_texture_score(video_path)
-    blink_score   = get_blink_score(video_path)
-    lip_score     = get_lip_score(video_path)
+    # Run all analysers IN PARALLEL ⚡
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        f_syncnet = executor.submit(get_syncnet_score, video_path)
+        f_texture = executor.submit(get_texture_score, video_path)
+        f_blink   = executor.submit(get_blink_score,   video_path)
+        f_lip     = executor.submit(get_lip_score,     video_path)
+
+        syncnet_score = f_syncnet.result()
+        texture_score = f_texture.result()
+        blink_score   = f_blink.result()
+        lip_score     = f_lip.result()
 
     # Combine
     final_score   = combine_scores(syncnet_score, texture_score,
