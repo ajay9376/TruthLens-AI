@@ -45,7 +45,7 @@ async function analyzeVideo() {
     formData.append('video', file);
 
     try {
-        const response = await fetch('/analyze-with-report', {
+        const response = await fetch('/analyze', {
             method: 'POST',
             body: formData
         });
