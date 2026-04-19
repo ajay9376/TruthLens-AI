@@ -32,6 +32,7 @@ function handleFile(file) {
     document.getElementById('previewZone').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'none';
     window._selectedFile = file;
+    window._lastResults = null;
 }
 
 // ─── Analyze ───
@@ -45,12 +46,14 @@ async function analyzeVideo() {
     formData.append('video', file);
 
     try {
-        const response = await fetch('/analyze', {
+        const response = await fetch('/analyze-with-report', {
             method: 'POST',
             body: formData
         });
 
         const data = await response.json();
+        console.log("Results:", data);
+        window._lastResults = data;
         hideLoading();
         showResults(data);
 
@@ -143,11 +146,13 @@ function showResults(data) {
     const existingBtn = document.getElementById('downloadBtn');
     if (existingBtn) existingBtn.remove();
 
+    const downloadDiv = document.createElement('div');
+    downloadDiv.id = 'downloadBtn';
+    downloadDiv.style.textAlign = 'center';
+    downloadDiv.style.marginTop = '16px';
+
     if (data.report_path) {
-        const downloadDiv = document.createElement('div');
-        downloadDiv.id = 'downloadBtn';
-        downloadDiv.style.textAlign = 'center';
-        downloadDiv.style.marginTop = '16px';
+        // Report generated successfully
         downloadDiv.innerHTML = `
             <a href="/download-report?path=${encodeURIComponent(data.report_path)}"
                style="display:inline-flex; align-items:center; gap:8px;
@@ -159,13 +164,54 @@ function showResults(data) {
                 📄 Download Forensic Report
             </a>
         `;
-        document.getElementById('resultsSection').appendChild(downloadDiv);
+    } else {
+        // Show button anyway — generate on click
+        downloadDiv.innerHTML = `
+            <button onclick="requestReport()"
+               style="display:inline-flex; align-items:center; gap:8px;
+                      background:linear-gradient(135deg,#7c3aed,#06b6d4);
+                      color:white; padding:14px 32px; border-radius:12px;
+                      border:none; cursor:pointer; font-family:'Syne',sans-serif;
+                      font-size:16px; font-weight:700; margin-top:8px;">
+                📄 Download Forensic Report
+            </button>
+        `;
     }
+
+    document.getElementById('resultsSection').appendChild(downloadDiv);
 
     // Scroll to results
     document.getElementById('resultsSection').scrollIntoView({
         behavior: 'smooth'
     });
+}
+
+// ─── Request Report ───
+async function requestReport() {
+    const file = window._selectedFile;
+    const results = window._lastResults;
+    if (!file || !results) return;
+
+    const btn = document.querySelector('#downloadBtn button');
+    if (btn) btn.textContent = '⏳ Generating report...';
+
+    const formData = new FormData();
+    formData.append('video', file);
+
+    try {
+        const response = await fetch('/analyze-with-report', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.report_path) {
+            window.location.href = `/download-report?path=${encodeURIComponent(data.report_path)}`;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('❌ Report generation failed!');
+    }
 }
 
 function setSignal(name, score) {
@@ -187,5 +233,6 @@ function resetUI() {
     if (downloadBtn) downloadBtn.remove();
     fileInput.value = '';
     window._selectedFile = null;
+    window._lastResults = null;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
