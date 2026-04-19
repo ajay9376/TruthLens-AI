@@ -45,7 +45,7 @@ async function analyzeVideo() {
     formData.append('video', file);
 
     try {
-        const response = await fetch('/analyze', {
+        const response = await fetch('/analyze-with-report', {
             method: 'POST',
             body: formData
         });
@@ -139,6 +139,29 @@ function showResults(data) {
     setSignal('blink',   data.blink_score);
     setSignal('lip',     data.lip_score);
 
+    // ─── Download Report Button ───
+    const existingBtn = document.getElementById('downloadBtn');
+    if (existingBtn) existingBtn.remove();
+
+    if (data.report_path) {
+        const downloadDiv = document.createElement('div');
+        downloadDiv.id = 'downloadBtn';
+        downloadDiv.style.textAlign = 'center';
+        downloadDiv.style.marginTop = '16px';
+        downloadDiv.innerHTML = `
+            <a href="/download-report?path=${encodeURIComponent(data.report_path)}"
+               style="display:inline-flex; align-items:center; gap:8px;
+                      background:linear-gradient(135deg,#7c3aed,#06b6d4);
+                      color:white; padding:14px 32px; border-radius:12px;
+                      text-decoration:none; font-family:'Syne',sans-serif;
+                      font-size:16px; font-weight:700; margin-top:8px;"
+               download>
+                📄 Download Forensic Report
+            </a>
+        `;
+        document.getElementById('resultsSection').appendChild(downloadDiv);
+    }
+
     // Scroll to results
     document.getElementById('resultsSection').scrollIntoView({
         behavior: 'smooth'
@@ -160,6 +183,8 @@ function resetUI() {
     document.getElementById('uploadZone').style.display = 'block';
     document.getElementById('previewZone').style.display = 'none';
     document.getElementById('resultsSection').style.display = 'none';
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) downloadBtn.remove();
     fileInput.value = '';
     window._selectedFile = null;
     window.scrollTo({ top: 0, behavior: 'smooth' });
