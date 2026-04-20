@@ -21,8 +21,8 @@
             <span class="logo-text">TruthLens<span class="accent">AI</span></span>
         </div>
         <nav>
-            <span class="nav-tag">v2.0</span>
-            <span class="nav-tag">4 Signals</span>
+            <span class="nav-tag">v3.0</span>
+            <span class="nav-tag">5 Signals</span>
             <span class="nav-tag live">● Live</span>
         </nav>
     </header>
@@ -36,7 +36,7 @@
             Video.
         </h1>
         <p class="hero-sub">
-            Powered by SyncNet · Face Texture · Blink Analysis · Lip Reading
+            Powered by SyncNet · Face Texture · Blink Analysis · Lip Reading · Voice Clone
         </p>
     </section>
 
@@ -75,6 +75,7 @@
 
         <!-- Signal Breakdown -->
         <div class="signals-grid">
+
             <div class="signal-card" id="signal-syncnet">
                 <div class="signal-header">
                     <span class="signal-icon">🎵</span>
@@ -112,17 +113,6 @@
             </div>
 
             <div class="signal-card" id="signal-lip">
-                <div class="signal-card" id="signal-voice">
-                <div class="signal-header">
-                    <span class="signal-icon">🎙️</span>
-                    <span class="signal-name">Voice Clone</span>
-                    <span class="signal-score" id="score-voice">—</span>
-                </div>
-                <div class="signal-bar">
-                    <div class="signal-fill" id="fill-voice"></div>
-                </div>
-                <div class="signal-label">Voice Clone Detection</div>
-                </div>
                 <div class="signal-header">
                     <span class="signal-icon">👄</span>
                     <span class="signal-name">Lip Reader</span>
@@ -133,6 +123,19 @@
                 </div>
                 <div class="signal-label">Speech Articulation</div>
             </div>
+
+            <div class="signal-card" id="signal-voice">
+                <div class="signal-header">
+                    <span class="signal-icon">🎙️</span>
+                    <span class="signal-name">Voice Clone</span>
+                    <span class="signal-score" id="score-voice">—</span>
+                </div>
+                <div class="signal-bar">
+                    <div class="signal-fill" id="fill-voice"></div>
+                </div>
+                <div class="signal-label">Voice Clone Detection</div>
+            </div>
+
         </div>
 
         <!-- Analyze Another -->
@@ -158,6 +161,7 @@
                 <div class="step" id="step2">⬡ Texture Analysis</div>
                 <div class="step" id="step3">⬡ Blink Detection</div>
                 <div class="step" id="step4">⬡ Lip Reading</div>
+                <div class="step" id="step5">⬡ Voice Clone Detection</div>
             </div>
         </div>
     </div>
@@ -165,13 +169,14 @@
     <!-- Footer -->
     <footer>
         <div class="footer-text">
-            TruthLens AI · Built with 4-Signal Detection
+            TruthLens AI · Built with 5-Signal Detection
         </div>
         <div class="footer-tags">
             <span>SyncNet</span>
             <span>MediaPipe</span>
             <span>YOLOv8</span>
             <span>LibROSA</span>
+            <span>Voice AI</span>
         </div>
     </footer>
 
