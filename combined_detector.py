@@ -1,13 +1,15 @@
 """
 TruthLens AI — Combined Deepfake Detector
 ==========================================
-Merges three independent signals into one confidence score:
+Merges five independent signals into one confidence score:
 
   Signal              Weight   Source
   ─────────────────────────────────────────
-  Face Texture         34%    texture_analyzer.py
-  Blink Pattern        33%    blink_detector.py
-  Lip Reader           33%    lip_reader.py
+  SyncNet Lip-Sync     15%    deepfake_detector.py
+  Face Texture         20%    texture_analyzer.py
+  Blink Pattern        30%    blink_detector.py
+  Lip Reader           20%    lip_reader.py
+  Voice Clone          15%    voice_clone_detector.py
 
   SyncNet: Available locally, disabled on cloud
 
@@ -123,9 +125,8 @@ def _parse_syncnet(output: str):
 def get_syncnet_score(video_path: str) -> float:
     _section("① SyncNet Lip-Sync Analysis")
 
-    # Disable on cloud
     if IS_CLOUD:
-        print("⚠️  SyncNet disabled on cloud — 3-signal mode active")
+        print("⚠️  SyncNet disabled on cloud — 4-signal mode active")
         return None
 
     if not _check_audio(video_path):
@@ -210,26 +211,40 @@ def get_lip_score(video_path: str) -> float:
 
 
 # ─────────────────────────────────────────────────
+#  5. Voice Clone Score ← NEW!
+# ─────────────────────────────────────────────────
+
+def get_voice_score(video_path: str) -> float:
+    _section("⑤ Voice Clone Detection")
+    try:
+        from voice_clone_detector import analyze_voice_clone
+        score, verdict = analyze_voice_clone(video_path)
+        print(f"   → Voice Score : {score:.1f}/100  [{verdict}]")
+        return float(score)
+    except Exception as exc:
+        print(f"⚠️  Voice analysis failed: {exc}")
+        return None
+
+
+# ─────────────────────────────────────────────────
 #  Combined Score & Verdict
 # ─────────────────────────────────────────────────
 
-def combine_scores(syncnet, texture, blink, lip) -> float:
-    """
-    Dynamically weight available signals.
-    If a signal is None it is excluded and weights are redistributed.
-    """
+def combine_scores(syncnet, texture, blink, lip, voice) -> float:
     signals = {
         'syncnet':    syncnet,
         'texture':    texture,
         'blink':      blink,
         'lip_reader': lip,
+        'voice':      voice,
     }
 
     base_weights = {
-        'syncnet':    0.20,
+        'syncnet':    0.15,
         'texture':    0.20,
-        'blink':      0.40,
+        'blink':      0.30,
         'lip_reader': 0.20,
+        'voice':      0.15,
     }
 
     # Filter out None signals
@@ -238,7 +253,7 @@ def combine_scores(syncnet, texture, blink, lip) -> float:
     if not active:
         return 50.0
 
-    # Redistribute weights
+    # Redistribute weights dynamically
     total_weight = sum(base_weights[k] for k in active)
     final_score = sum(
         active[k] * (base_weights[k] / total_weight)
@@ -281,7 +296,7 @@ def detect(video_path: str):
 
     video_path = os.path.abspath(video_path)
 
-    _banner("🔍 TruthLens AI — Combined Deepfake Detector v2.0")
+    _banner("🔍 TruthLens AI — Combined Deepfake Detector v3.0")
 
     if not os.path.exists(video_path):
         print(f"❌ Video not found: {video_path}")
@@ -289,25 +304,27 @@ def detect(video_path: str):
 
     print(f"📹 Video : {os.path.basename(video_path)}")
     print(f"📂 Path  : {video_path}")
-    print(f"☁️  Mode  : {'Cloud (3-signal)' if IS_CLOUD else 'Local (4-signal)'}")
+    print(f"☁️  Mode  : {'Cloud (4-signal)' if IS_CLOUD else 'Local (5-signal)'}")
 
     # Run all analysers IN PARALLEL ⚡
     from concurrent.futures import ThreadPoolExecutor
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         f_syncnet = executor.submit(get_syncnet_score, video_path)
         f_texture = executor.submit(get_texture_score, video_path)
         f_blink   = executor.submit(get_blink_score,   video_path)
         f_lip     = executor.submit(get_lip_score,     video_path)
+        f_voice   = executor.submit(get_voice_score,   video_path)
 
         syncnet_score = f_syncnet.result()
         texture_score = f_texture.result()
         blink_score   = f_blink.result()
         lip_score     = f_lip.result()
+        voice_score   = f_voice.result()
 
     # Combine
     final_score   = combine_scores(syncnet_score, texture_score,
-                                   blink_score, lip_score)
+                                   blink_score, lip_score, voice_score)
     verdict, icon = verdict_from_score(final_score)
 
     # Results Dashboard
@@ -328,6 +345,7 @@ def detect(video_path: str):
     _row("Face Texture",       texture_score)
     _row("Blink Pattern",      blink_score)
     _row("Lip Reader",         lip_score)
+    _row("Voice Clone",        voice_score)
 
     print(f"\n  {'─'*75}")
     bar = _score_bar(final_score, 20)
@@ -345,7 +363,7 @@ def detect(video_path: str):
     else:
         print("     Multiple signals flag this as likely AI-generated / manipulated.")
 
-    print("\n  ✅ TruthLens AI Analysis Complete!")
+    print("\n  ✅ TruthLens AI v3.0 Analysis Complete!")
     print("═" * 56 + "\n")
 
     return {
@@ -353,6 +371,7 @@ def detect(video_path: str):
         'texture_score': texture_score if texture_score is not None else 50.0,
         'blink_score':   blink_score   if blink_score   is not None else 50.0,
         'lip_score':     lip_score     if lip_score     is not None else 50.0,
+        'voice_score':   voice_score   if voice_score   is not None else 50.0,
         'final_score':   final_score,
         'verdict':       verdict,
     }
