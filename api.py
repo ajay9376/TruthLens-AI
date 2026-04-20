@@ -65,6 +65,7 @@ async def analyze(video: UploadFile = File(...)):
                 "texture_score": results["texture_score"],
                 "blink_score":   results["blink_score"],
                 "lip_score":     results["lip_score"],
+                "voice_score":   results["voice_score"],
             })
         else:
             return JSONResponse({"error": "Analysis failed"}, status_code=500)
@@ -102,6 +103,7 @@ async def analyze_with_report(video: UploadFile = File(...)):
                 "texture_score": results["texture_score"],
                 "blink_score":   results["blink_score"],
                 "lip_score":     results["lip_score"],
+                "voice_score":   results["voice_score"],
                 "report_path":   report_path,
             })
         else:

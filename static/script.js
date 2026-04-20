@@ -141,6 +141,7 @@ function showResults(data) {
     setSignal('texture', data.texture_score);
     setSignal('blink',   data.blink_score);
     setSignal('lip',     data.lip_score);
+    setSignal('voice',   data.voice_score);
 
     // ─── Download Report Button ───
     const existingBtn = document.getElementById('downloadBtn');
